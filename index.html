@@ -1114,15 +1114,14 @@ function importData(file) {
       const data = JSON.parse(e.target.result);
       if (!data.fitness_users) return toast('无效的备份文件', 'error');
       if (!confirm('导入数据将覆盖现有数据，确定继续？')) return;
-      if (data.fitness_users) DataManager.set('fitness_users', data.fitness_users);
-      if (data.fitness_workouts) DataManager.set('fitness_workouts', data.fitness_workouts);
-      if (data.fitness_weight) DataManager.set('fitness_weight', data.fitness_weight);
-      if (data.fitness_checkins) DataManager.set('fitness_checkins', data.fitness_checkins);
-      if (data.fitness_templates) DataManager.set('fitness_templates', data.fitness_templates);
-      currentUser = DataManager.getUsers()[0];
-      renderUserSwitcher();
-      refreshCurrentTab();
-      toast('📤 数据已导入！');
+      var r = window._fbDB.ref();
+      if (data.fitness_users) r.child('users').set(data.fitness_users);
+      if (data.fitness_workouts) r.child('workouts').set(data.fitness_workouts);
+      if (data.fitness_weight) r.child('weights').set(data.fitness_weight);
+      if (data.fitness_checkins) r.child('checkins').set(data.fitness_checkins);
+      if (data.fitness_templates) r.child('templates').set(data.fitness_templates);
+      if (data.fitness_schedule) r.child('schedule').set(data.fitness_schedule);
+      toast('📤 数据已导入，同步中...');
     } catch (err) {
       toast('文件格式错误', 'error');
     }
@@ -1133,10 +1132,11 @@ function importData(file) {
 function clearAllData() {
   if (!confirm('⚠️ 确定要清除全部数据吗？此操作不可恢复！\n\n建议先导出备份。')) return;
   if (!confirm('再次确认：清除所有健身记录、模板和设置？')) return;
-  ['fitness_users', 'fitness_workouts', 'fitness_weight', 'fitness_checkins', 'fitness_templates'].forEach(k => localStorage.removeItem(k));
-  currentUser = DataManager.getUsers()[0];
-  renderUserSwitcher();
-  refreshCurrentTab();
+  var r = window._fbDB.ref();
+  r.child('workouts').set([]);
+  r.child('weights').set([]);
+  r.child('checkins').set([]);
+  r.child('templates').set([]);
   toast('所有数据已清除');
 }
 
