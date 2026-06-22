@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试模板</title>
+<style>
+body{font-family:sans-serif;max-width:600px;margin:20px auto;padding:16px;background:#fdf2f8}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.template-card{display:flex;align-items:center;justify-content:space-between;padding:14px;border-radius:12px;margin-bottom:8px;background:#fafafa}
+.btn{padding:6px 14px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;margin-left:6px}
+.btn-edit{background:#7c3aed;color:#fff}
+.btn-del{background:#ef4444;color:#fff}
+</style>
+</head>
+<body>
+<h2>📋 动作模板</h2>
+<div class="card">
+  <div id="list"></div>
+  <button class="btn btn-edit" style="width:100%;margin-top:12px" onclick="addTemplate()">+ 新建模板</button>
+</div>
+
+<script>
+// Hardcode defaults - no localStorage
+var templates = [
+  { id: 't1', name: '🏋️ 推胸日', items: [{ name: '杠铃卧推', weight: '', reps: '' }, { name: '哑铃飞鸟', weight: '', reps: '' }, { name: '绳索夹胸', weight: '', reps: '' }] },
+  { id: 't2', name: '🔙 拉背日', items: [{ name: '引体向上', weight: '自重', reps: '' }, { name: '杠铃划船', weight: '', reps: '' }, { name: '高位下拉', weight: '', reps: '' }] },
+  { id: 't3', name: '🦵 腿部日', items: [{ name: '杠铃深蹲', weight: '', reps: '' }, { name: '腿举', weight: '', reps: '' }, { name: '腿弯举', weight: '', reps: '' }] },
+];
+
+function render() {
+  document.getElementById('list').innerHTML = templates.map(t =>
+    '<div class="template-card">' +
+      '<div><b>' + t.name + '</b><br><small>' + t.items.length + ' 个项目</small></div>' +
+      '<div>' +
+        '<button class="btn btn-edit" onclick="edit(\'' + t.id + '\')">✏️ 编辑</button>' +
+        '<button class="btn btn-del" onclick="del(\'' + t.id + '\')">🗑 删除</button>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function edit(id) {
+  var t = templates.find(function(x){ return x.id === id; });
+  var name = prompt('模板名称：', t.name);
+  if (!name) return;
+  t.name = name;
+  // Edit items
+  var itemsStr = t.items.map(function(i){ return i.name + ' ' + i.weight + ' ' + i.reps; }).join('\n');
+  var newItemsStr = prompt('编辑动作（每行一个，格式：名称 重量 次数）：', itemsStr);
+  if (newItemsStr !== null) {
+    t.items = newItemsStr.split('\n').filter(Boolean).map(function(line) {
+      var parts = line.split(' ');
+      return { name: parts[0] || '', weight: parts[1] || '', reps: parts[2] || '' };
+    });
+  }
+  render();
+}
+
+function del(id) {
+  if (!confirm('确定删除？')) return;
+  templates = templates.filter(function(t){ return t.id !== id; });
+  render();
+}
+
+function addTemplate() {
+  var name = prompt('新模板名称：');
+  if (!name) return;
+  templates.push({ id: Date.now().toString(36), name: name, items: [] });
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

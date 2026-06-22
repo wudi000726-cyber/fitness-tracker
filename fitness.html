@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏋️ 情侣健身记录</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ========== Reset & Variables ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#e91e63;--pink-light:#fce4ec;--purple:#7c3aed;--purple-light:#ede9fe;
+  --blue:#3b82f6;--blue-light:#dbeafe;--green:#10b981;--green-light:#d1fae5;
+  --orange:#f59e0b;--orange-light:#fef3c7;--red:#ef4444;--red-light:#fee2e2;
+  --bg:#fdf2f8;--card:#fff;--text:#1e293b;--text2:#64748b;--border:#e2e8f0;
+  --radius:16px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
+
+/* ========== App Shell ========== */
+.app{max-width:800px;margin:0 auto;padding:16px}
+.header{text-align:center;padding:20px 0 12px}
+.header h1{font-size:28px;background:linear-gradient(135deg,var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header .subtitle{color:var(--text2);font-size:14px;margin-top:4px}
+
+/* User Switcher */
+.user-switcher{display:flex;justify-content:center;gap:16px;margin:16px 0}
+.user-btn{display:flex;align-items:center;gap:8px;padding:10px 24px;border-radius:50px;border:2px solid var(--border);background:var(--card);cursor:pointer;font-size:16px;font-weight:600;transition:all .2s}
+.user-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.user-btn.active{border-color:var(--pink);background:var(--pink-light);color:var(--pink)}
+.user-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.avatar-him{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.avatar-her{background:linear-gradient(135deg,#ec4899,#db2777)}
+
+/* Tab Nav */
+.tab-nav{display:flex;gap:2px;background:var(--card);border-radius:var(--radius);padding:3px;margin-bottom:16px;box-shadow:var(--shadow);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+.tab-btn{flex:1;min-width:0;padding:9px 4px;border:none;background:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);transition:all .2s;white-space:nowrap}
+.tab-btn:hover{background:#f1f5f9}
+.tab-btn.active{background:var(--pink);color:#fff}
+
+/* Tab Content */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Cards */
+.card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h3{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* ========== Forms ========== */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:4px;color:var(--text2)}
+input,select,textarea{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;transition:border .2s;background:#fafafa}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pink);background:#fff}
+textarea{resize:vertical;min-height:60px}
+input[type="number"]{font-variant-numeric:tabular-nums}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff}
+.btn-secondary{background:#f1f5f9;color:var(--text)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.btn-block{width:100%}
+.btn-outline{background:#fff;border:2px solid var(--pink);color:var(--pink);}
+
+/* Workout Item Row */
+.workout-item input{font-size:14px}
+.workout-check{width:24px;height:24px;min-width:24px;appearance:none;border:2px solid #d1d5db;border-radius:6px;cursor:pointer;transition:all .2s;position:relative}
+.workout-check:checked{background:var(--green);border-color:var(--green)}
+.workout-check:checked::after{content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:14px;font-weight:700}
+.workout-item.done .item-name,.workout-item.done .item-weight,.workout-item.done .item-reps{text-decoration:line-through;color:#9ca3af}
+
+/* Check-in Button */
+.checkin-btn{width:120px;height:120px;border-radius:50%;border:4px solid var(--green);background:var(--green-light);font-size:48px;cursor:pointer;transition:all .3s;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.checkin-btn:hover{transform:scale(1.08);box-shadow:0 8px 25px rgba(16,185,129,.3)}
+.checkin-btn.checked{background:var(--green);border-color:var(--green)}
+.checkin-btn .checkin-text{font-size:12px;font-weight:600;color:var(--green)}
+.checkin-btn.checked .checkin-text{color:#fff}
+
+/* Exercise Set Row */
+.set-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.set-row input{flex:1;padding:8px 10px}
+.set-row .set-label{font-size:13px;color:var(--text2);min-width:40px}
+.exercise-block{background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:12px;position:relative}
+.exercise-block h4{font-size:15px;margin-bottom:8px}
+
+/* ========== History ========== */
+.history-item{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;margin-bottom:8px;background:#fafafa;cursor:pointer;transition:all .2s}
+.history-item:hover{background:#f1f5f9}
+.history-badge{min-width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.badge-strength{background:var(--purple-light)}
+.badge-cardio{background:var(--blue-light)}
+.badge-checkin{background:var(--green-light)}
+.history-info{flex:1;min-width:0}
+.history-info .h-title{font-weight:600;font-size:15px}
+.history-info .h-meta{font-size:12px;color:var(--text2)}
+.history-detail{display:none;padding:12px 0 0;border-top:1px solid var(--border);margin-top:12px}
+.history-item.expanded .history-detail{display:block}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty-state .empty-icon{font-size:64px;margin-bottom:12px}
+
+/* ========== Stats Cards ========== */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:16px;text-align:center;box-shadow:var(--shadow)}
+.stat-card .stat-value{font-size:32px;font-weight:800;background:linear-gradient(135deg,var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-card .stat-label{font-size:13px;color:var(--text2);margin-top:4px}
+.chart-container{position:relative;height:280px;margin:16px 0}
+
+/* ========== PK ========== */
+.pk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pk-card{background:var(--card);border-radius:var(--radius);padding:20px;text-align:center;box-shadow:var(--shadow)}
+.pk-card.him{border-top:4px solid var(--blue)}
+.pk-card.her{border-top:4px solid #ec4899}
+.pk-card .pk-name{font-size:18px;font-weight:700;margin-bottom:12px}
+.pk-card .pk-stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.pk-card .pk-stat:last-child{border-bottom:none}
+.pk-winner{color:var(--green);font-weight:700}
+.pk-vs{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:var(--pink)}
+
+/* ========== Templates ========== */
+.template-card{display:flex;align-items:center;justify-content:space-between;padding:14px;border-radius:12px;margin-bottom:8px;background:#fafafa}
+.template-card .t-name{font-weight:600}
+.template-card .t-count{font-size:12px;color:var(--text2)}
+.template-actions{display:flex;gap:6px}
+
+/* ========== Settings ========== */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-weight:500}
+.setting-desc{font-size:12px;color:var(--text2)}
+
+/* ========== Toast ========== */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:50px;font-weight:600;font-size:14px;z-index:999;animation:toastIn .3s ease,toastOut .3s ease 2s forwards;box-shadow:0 8px 25px rgba(0,0,0,.15)}
+.toast-success{background:#10b981;color:#fff}
+.toast-error{background:#ef4444;color:#fff}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+/* ========== Modal ========== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{margin-bottom:16px}
+
+/* ========== Utils ========== */
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.col{flex:1;min-width:140px}
+.text-center{text-align:center}
+.mt-8{margin-top:8px}
+.mt-16{margin-top:16px}
+.mb-16{margin-bottom:16px}
+.hidden{display:none!important}
+.tag{display:inline-block;padding:2px 10px;border-radius:50px;font-size:12px;font-weight:500}
+.tag-strength{background:var(--purple-light);color:var(--purple)}
+.tag-cardio{background:var(--blue-light);color:var(--blue)}
+.tag-checkin{background:var(--green-light);color:var(--green)}
+.color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+
+/* Schedule Grid */
+.schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.schedule-day{background:#f8fafc;border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s;min-width:0}
+.schedule-day:hover{border-color:var(--pink);box-shadow:var(--shadow)}
+.schedule-day.active{background:var(--pink-light);border-color:var(--pink)}
+.schedule-day .day-name{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.schedule-day.active .day-name{color:var(--pink)}
+.schedule-day .day-routine{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schedule-day .day-rest{font-size:11px;color:#94a3b8}
+.schedule-day .day-edit{font-size:10px;color:var(--pink);margin-top:2px}
+
+/* Routine selector popup */
+.routine-selector{display:none;position:absolute;background:var(--card);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:10;padding:8px;min-width:140px}
+.routine-selector.show{display:block}
+.routine-selector .routine-opt{display:block;width:100%;padding:8px 12px;border:none;background:none;text-align:left;font-size:13px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.routine-selector .routine-opt:hover{background:#f1f5f9}
+.routine-selector .routine-opt.rest-day{color:var(--text2);border-top:1px solid var(--border);margin-top:4px;padding-top:10px}
+
+/* ========== Responsive ========== */
+@media(max-width:500px){
+  .header h1{font-size:22px}
+  .tab-btn{font-size:11px;padding:8px 3px}
+  .pk-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-card .stat-value{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>🏋️ 情侣健身记录</h1>
+    <p class="subtitle">一起运动，一起变好 ❤️</p>
+  </div>
+
+  <!-- User Switcher -->
+  <div class="user-switcher" id="userSwitcher"></div>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="record">📝 记录</button>
+    <button class="tab-btn" data-tab="history">📋 历史</button>
+    <button class="tab-btn" data-tab="stats">📊 统计</button>
+    <button class="tab-btn" data-tab="pk">⚔️ PK</button>
+    <button class="tab-btn" data-tab="schedule">📅 周课表</button>
+    <button class="tab-btn" data-tab="templates">📋 模板</button>
+    <button class="tab-btn" data-tab="settings">⚙️ 设置</button>
+  </nav>
+
+  <!-- ==================== Record Tab ==================== -->
+  <div class="tab-content active" id="tab-record">
+    <!-- Daily Routine Checklist -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <h3 style="margin:0" id="dailyTitle">📅 今日训练</h3>
+          <p style="font-size:13px;color:var(--text2);margin-top:4px" id="dailySubtitle"></p>
+        </div>
+        <button class="btn btn-sm btn-outline" id="switchRoutineBtn" title="更换今天的训练计划">🔄 换计划</button>
+      </div>
+      <div id="dailyChecklist"></div>
+      <div class="mt-16" style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-block" id="saveDailyBtn">💾 保存今日记录</button>
+      </div>
+      <p style="text-align:center;margin-top:8px;font-size:12px;color:var(--text2)" id="dailySavedStatus"></p>
+    </div>
+
+    <!-- Weight Recording -->
+    <div class="card">
+      <h3>⚖️ 体重记录</h3>
+      <div class="row">
+        <div class="col"><div class="form-group"><label>今日体重 (kg)</label><input type="number" id="weightInput" step="0.1" min="20" max="300" placeholder="60.0"></div></div>
+        <div class="col"><div class="form-group"><label>日期</label><input type="date" id="weightDate"></div></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="saveWeightBtn">💾 记录体重</button>
+    </div>
+  </div>
+
+  <!-- ==================== History Tab ==================== -->
+  <div class="tab-content" id="tab-history">
+    <div class="card">
+      <div class="row" style="align-items:end">
+        <div class="col">
+          <div class="form-group"><label>类型筛选</label>
+            <select id="historyFilter">
+              <option value="all">全部</option>
+              <option value="workout">🏋️ 运动记录</option>
+              <option value="checkin">✅ 打卡</option>
+              <option value="weight">⚖️ 体重</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group"><label>起始日期</label><input type="date" id="historyDateFrom"></div>
+        </div>
+        <div class="col">
+          <div class="form-group"><label>结束日期</label><input type="date" id="historyDateTo"></div>
+        </div>
+        <div class="col" style="display:flex;align-items:center;padding-bottom:4px">
+          <button class="btn btn-primary btn-sm" id="refreshHistoryBtn">刷新</button>
+        </div>
+      </div>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- ==================== Stats Tab ==================== -->
+  <div class="tab-content" id="tab-stats">
+    <div class="stats-grid" id="statsCards"></div>
+    <div class="card">
+      <h3>📈 体重变化趋势</h3>
+      <div class="chart-container"><canvas id="weightChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>📊 每周训练次数</h3>
+      <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ==================== PK Tab ==================== -->
+  <div class="tab-content" id="tab-pk">
+    <div class="pk-grid" id="pkGrid"></div>
+  </div>
+
+  <!-- ==================== Templates Tab ==================== -->
+  <div class="tab-content" id="tab-schedule">
+    <div class="card">
+      <h3>📅 周课表</h3>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:12px">为每天指定训练计划，记录页会自动加载</p>
+      <div id="weeklySchedule"></div>
+    </div>
+  </div>
+
+  <!-- ==================== Templates Tab ==================== -->
+  <div class="tab-content" id="tab-templates">
+    <div class="card">
+      <h3>📋 动作模板</h3>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:12px">创建和编辑训练动作模板</p>
+      <div id="templateList">
+        <div class="template-card">
+          <div><div class="t-name">🏋️ 推胸日</div><div class="t-count">3 个项目</div></div>
+          <div class="template-actions">
+            <button class="btn btn-sm btn-primary edit-template" data-id="t1">✏️ 编辑</button>
+            <button class="btn btn-sm btn-danger delete-template" data-id="t1">🗑 删除</button>
+          </div>
+        </div>
+        <div class="template-card">
+          <div><div class="t-name">🔙 拉背日</div><div class="t-count">3 个项目</div></div>
+          <div class="template-actions">
+            <button class="btn btn-sm btn-primary edit-template" data-id="t2">✏️ 编辑</button>
+            <button class="btn btn-sm btn-danger delete-template" data-id="t2">🗑 删除</button>
+          </div>
+        </div>
+        <div class="template-card">
+          <div><div class="t-name">🦵 腿部日</div><div class="t-count">3 个项目</div></div>
+          <div class="template-actions">
+            <button class="btn btn-sm btn-primary edit-template" data-id="t3">✏️ 编辑</button>
+            <button class="btn btn-sm btn-danger delete-template" data-id="t3">🗑 删除</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-block mt-16" id="addTemplateBtn">+ 新建模板</button>
+    </div>
+  </div>
+
+  <!-- ==================== Settings Tab ==================== -->
+  <div class="tab-content" id="tab-settings">
+    <div class="card">
+      <h3>👤 个人资料</h3>
+      <div id="profileSettings"></div>
+    </div>
+    <div class="card">
+      <h3>💾 数据管理</h3>
+      <div class="setting-row">
+        <div><div class="setting-label">导出全部数据</div><div class="setting-desc">下载 JSON 文件备份</div></div>
+        <button class="btn btn-outline btn-sm" id="exportBtn">📥 导出</button>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-label">导入数据</div><div class="setting-desc">从 JSON 文件恢复数据</div></div>
+        <button class="btn btn-outline btn-sm" id="importBtn">📤 导入</button>
+        <input type="file" id="importFile" accept=".json" class="hidden">
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-label">清除全部数据</div><div class="setting-desc" style="color:var(--red)">此操作不可恢复</div></div>
+        <button class="btn btn-danger btn-sm" id="clearDataBtn">🗑 清除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template Edit Modal -->
+<div class="modal-overlay" id="templateModal">
+  <div class="modal">
+    <h3 id="templateModalTitle">新建模板</h3>
+    <div class="form-group"><label>模板名称</label><input type="text" id="templateNameInput" placeholder="如：推胸日"></div>
+    <div id="templateExercises"></div>
+    <button class="btn btn-outline btn-sm mt-8" id="addTemplateExerciseBtn">+ 添加动作</button>
+    <div class="mt-16" style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-block" id="saveTemplateBtn">保存</button>
+      <button class="btn btn-secondary" id="cancelTemplateBtn">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+<script>
+// ==================== AUTO-REPAIR CORRUPT DATA ====================
+(function() {
+  const keys = ['fitness_users','fitness_workouts','fitness_cardio','fitness_weight','fitness_checkins','fitness_templates','fitness_schedule'];
+  keys.forEach(k => {
+    try {
+      const v = localStorage.getItem(k);
+      if (v !== null && v !== undefined) {
+        const p = JSON.parse(v);
+        if (p === null || p === false || (typeof p !== 'object')) localStorage.removeItem(k);
+      }
+    } catch(e) { localStorage.removeItem(k); }
+  });
+})();
+
+// ==================== DATA MANAGER ====================
+const DataManager = {
+  get(key, fallback = []) {
+    try {
+      const v = localStorage.getItem(key);
+      if (!v) return fallback;
+      const parsed = JSON.parse(v);
+      return (parsed != null && (Array.isArray(fallback) ? Array.isArray(parsed) : typeof parsed === typeof fallback)) ? parsed : fallback;
+    }
+    catch(e) { return fallback; }
+  },
+  set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
+  genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); },
+
+  // Users
+  getUsers() { return this.get('fitness_users', this.defaultUsers()); },
+  defaultUsers() { return [
+    { id: 'user1', name: '男朋友', avatar: '👦', color: '#3b82f6' },
+    { id: 'user2', name: '女朋友', avatar: '👧', color: '#ec4899' },
+  ]},
+  saveUsers(users) { this.set('fitness_users', users); },
+
+  // Workouts (strength)
+  getWorkouts() {
+    const list = this.get('fitness_workouts');
+    let migrated = false;
+    for (const w of list) {
+      if (w.items) for (const item of w.items) {
+        if ((item.value !== undefined || item.unit !== undefined) && item.weight === undefined) {
+          item.weight = item.value || ''; item.reps = item.unit || '';
+          delete item.value; delete item.unit; migrated = true;
+        }
+      }
+    }
+    if (migrated) this.set('fitness_workouts', list);
+    return list;
+  },
+  saveWorkout(w) { const list = this.getWorkouts(); list.unshift(w); this.set('fitness_workouts', list); },
+  updateWorkout(id, data) { const list = this.getWorkouts(); const idx = list.findIndex(w => w.id === id); if(idx >= 0) { list[idx] = { ...list[idx], ...data }; this.set('fitness_workouts', list); } },
+  deleteWorkout(id) { this.set('fitness_workouts', this.getWorkouts().filter(w => w.id !== id)); },
+
+  // Cardio
+  getCardios() { return this.get('fitness_cardio'); },
+  saveCardio(c) { const list = this.getCardios(); list.unshift(c); this.set('fitness_cardio', list); },
+  updateCardio(id, data) { const list = this.getCardios(); const idx = list.findIndex(c => c.id === id); if(idx >= 0) { list[idx] = { ...list[idx], ...data }; this.set('fitness_cardio', list); } },
+  deleteCardio(id) { this.set('fitness_cardio', this.getCardios().filter(c => c.id !== id)); },
+
+  // Weight
+  getWeights() { return this.get('fitness_weight'); },
+  saveWeight(w) { const list = this.getWeights(); list.unshift(w); this.set('fitness_weight', list); },
+  deleteWeight(id) { this.set('fitness_weight', this.getWeights().filter(w => w.id !== id)); },
+
+  // Check-ins
+  getCheckins() { return this.get('fitness_checkins'); },
+  toggleCheckin(userId, date) { const list = this.getCheckins(); const idx = list.findIndex(c => c.userId === userId && c.date === date);
+    if(idx >= 0) { list.splice(idx, 1); this.set('fitness_checkins', list); return false; }
+    else { list.unshift({ userId, date }); this.set('fitness_checkins', list); return true; }
+  },
+  isCheckedIn(userId, date) { return this.getCheckins().some(c => c.userId === userId && c.date === date); },
+
+  // Templates
+  getTemplates() {
+    const list = this.get('fitness_templates', this.defaultTemplates());
+    let migrated = false;
+    for (const t of list) {
+      if (t.items) for (const item of t.items) {
+        if ((item.value !== undefined || item.unit !== undefined) && item.weight === undefined) {
+          item.weight = item.value || ''; item.reps = item.unit || '';
+          delete item.value; delete item.unit; migrated = true;
+        }
+      }
+    }
+    if (migrated) this.set('fitness_templates', list);
+    return list;
+  },
+  defaultTemplates() { return [
+    { id: 't1', name: '🏋️ 推胸日', items: [{ name: '杠铃卧推', weight: '', reps: '' }, { name: '哑铃飞鸟', weight: '', reps: '' }, { name: '绳索夹胸', weight: '', reps: '' }] },
+    { id: 't2', name: '🔙 拉背日', items: [{ name: '引体向上', weight: '自重', reps: '' }, { name: '杠铃划船', weight: '', reps: '' }, { name: '高位下拉', weight: '', reps: '' }] },
+    { id: 't3', name: '🦵 腿部日', items: [{ name: '杠铃深蹲', weight: '', reps: '' }, { name: '腿举', weight: '', reps: '' }, { name: '腿弯举', weight: '', reps: '' }] },
+  ]},
+  saveTemplates(templates) { this.set('fitness_templates', templates); },
+
+  // Weekly Schedule
+  getSchedule() { return this.get('fitness_schedule', this.defaultSchedule()); },
+  defaultSchedule() { return {
+    user1: { monday: 't1', tuesday: null, wednesday: 't2', thursday: null, friday: 't3', saturday: null, sunday: null },
+    user2: { monday: 't1', tuesday: null, wednesday: 't2', thursday: null, friday: 't3', saturday: null, sunday: null },
+  };},
+  saveSchedule(s) { this.set('fitness_schedule', s); },
+};
+
+// ==================== APP STATE ====================
+let currentUser = DataManager.getUsers()[0];
+let currentTab = 'record';
+let editingTemplateId = null;
+
+// ==================== UTILS ====================
+function today() { return new Date().toISOString().split('T')[0]; }
+function formatDate(d) { const date = new Date(d); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
+function getWeekStart(d) { const date = new Date(d); const day = date.getDay(); const diff = date.getDate() - day + (day === 0 ? -6 : 1); return formatDate(new Date(date.setDate(diff))); }
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast toast-${type}`;
+  setTimeout(() => el.classList.add('hidden'), 2500);
+}
+
+// ==================== RENDER FUNCTIONS ====================
+
+// --- User Switcher ---
+function renderUserSwitcher() {
+  const users = DataManager.getUsers();
+  const container = document.getElementById('userSwitcher');
+  container.innerHTML = users.map(u => `
+    <button class="user-btn ${u.id === currentUser.id ? 'active' : ''}" data-user-id="${u.id}">
+      <span class="user-avatar ${u.id === 'user1' ? 'avatar-him' : 'avatar-her'}">${u.avatar}</span>
+      ${u.name}
+    </button>
+  `).join('');
+  container.querySelectorAll('.user-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentUser = DataManager.getUsers().find(u => u.id === btn.dataset.userId);
+      renderUserSwitcher();
+      refreshCurrentTab();
+    });
+  });
+}
+
+// --- Tab Switching ---
+function setupTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${currentTab}`).classList.add('active');
+      refreshCurrentTab();
+    });
+  });
+}
+
+function refreshCurrentTab() {
+  switch(currentTab) {
+    case 'record': renderRecordTab(); break;
+    case 'history': renderHistoryTab(); break;
+    case 'stats': renderStatsTab(); break;
+    case 'pk': renderPKTab(); break;
+    case 'schedule': renderScheduleTab(); break;
+    case 'templates': renderTemplatesTab(); break;
+    case 'settings': renderSettingsTab(); break;
+  }
+}
+
+// ==================== RECORD TAB ====================
+const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const DAY_LABELS = ['周日','周一','周二','周三','周四','周五','周六'];
+
+function renderRecordTab() {
+  const date = today();
+  const dayKey = DAY_NAMES[new Date().getDay()];
+  const dayLabel = DAY_LABELS[new Date().getDay()];
+
+  // Get today's routine from schedule
+  const schedule = DataManager.getSchedule();
+  const userSchedule = schedule[currentUser.id] || {};
+  const routineId = userSchedule[dayKey];
+  const templates = DataManager.getTemplates();
+  const template = routineId ? templates.find(t => t.id === routineId) : null;
+
+  // Check if today already has a saved workout
+  const existing = DataManager.getWorkouts().find(
+    w => w.userId === currentUser.id && w.date === date
+  );
+
+  // Title
+  document.getElementById('dailyTitle').textContent = `📅 ${date} ${dayLabel}`;
+
+  if (template) {
+    document.getElementById('dailySubtitle').textContent = `今日计划：${template.name}`;
+    renderDailyChecklist(template, existing);
+  } else {
+    document.getElementById('dailySubtitle').textContent = '🎉 今天是休息日';
+    document.getElementById('dailyChecklist').innerHTML = `
+      <div class="empty-state"><div class="empty-icon">🏖️</div><p>今天没有安排训练计划</p><p style="font-size:13px">点击右上角「换计划」手动选择，或在「训练计划」页设置周课表</p></div>`;
+    document.getElementById('dailySavedStatus').textContent = '';
+  }
+
+  // Saved status
+  if (existing) {
+    document.getElementById('dailySavedStatus').textContent = '✅ 今日已保存 · 可修改后重新保存';
+    document.getElementById('saveDailyBtn').textContent = '💾 更新今日记录';
+  } else if (template) {
+    document.getElementById('dailySavedStatus').textContent = '';
+    document.getElementById('saveDailyBtn').textContent = '💾 保存今日记录';
+  }
+
+  // Weight date default
+  if (!document.getElementById('weightDate').value) document.getElementById('weightDate').value = date;
+}
+
+function renderDailyChecklist(template, existing) {
+  const container = document.getElementById('dailyChecklist');
+  const items = existing ? existing.items : template.items.map(it => ({ name: it.name, weight: it.weight || '', reps: it.reps || '', done: false }));
+
+  container.innerHTML = items.map((item, i) => `
+    <div class="workout-item ${item.done ? 'done' : ''}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input type="text" class="item-name" value="${escapeHtml(item.name)}" style="flex:2" placeholder="项目">
+      <input type="text" class="item-weight" value="${escapeHtml(item.weight || '')}" style="flex:1.5" placeholder="重量">
+      <input type="text" class="item-reps" value="${escapeHtml(item.reps || '')}" style="flex:1" placeholder="次数">
+      <input type="checkbox" class="workout-check" title="完成" ${item.done ? 'checked' : ''}>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.workout-check').forEach(cb => {
+    cb.addEventListener('change', function() {
+      this.closest('.workout-item').classList.toggle('done', this.checked);
+    });
+  });
+}
+
+function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+
+// --- Save Daily Workout ---
+document.getElementById('saveDailyBtn').addEventListener('click', () => {
+  const items = [];
+  document.querySelectorAll('#dailyChecklist .workout-item').forEach(el => {
+    const name = el.querySelector('.item-name').value.trim();
+    const weight = el.querySelector('.item-weight').value.trim();
+    const reps = el.querySelector('.item-reps').value.trim();
+    const done = el.querySelector('.workout-check').checked;
+    if (name) items.push({ name, weight, reps, done });
+  });
+  if (items.length === 0) return toast('请至少有一个训练项目', 'error');
+
+  const date = today();
+  const existing = DataManager.getWorkouts().find(
+    w => w.userId === currentUser.id && w.date === date
+  );
+
+  if (existing) {
+    DataManager.updateWorkout(existing.id, { items });
+  } else {
+    DataManager.saveWorkout({ id: DataManager.genId(), userId: currentUser.id, date, items });
+    // Auto-checkin on first save of the day
+    DataManager.toggleCheckin(currentUser.id, date);
+  }
+  toast(existing ? '✅ 今日记录已更新！' : '💪 今日记录已保存！');
+  renderRecordTab();
+});
+
+// --- Switch Routine ---
+document.getElementById('switchRoutineBtn').addEventListener('click', () => {
+  const templates = DataManager.getTemplates();
+  if (templates.length === 0) return toast('请先在「训练计划」页创建模板', 'error');
+
+  const list = templates.map((t, i) => `${i + 1}. ${t.name}`).join('\n');
+  const choice = prompt('选择今天的训练计划：\n\n' + list + '\n\n输入序号：');
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (idx < 0 || idx >= templates.length) return toast('无效的选择', 'error');
+
+  const t = templates[idx];
+  renderDailyChecklist(t, null);
+  document.getElementById('dailySubtitle').textContent = `今日计划：${t.name}（手动选择）`;
+  document.getElementById('dailySavedStatus').textContent = '';
+  document.getElementById('saveDailyBtn').textContent = '💾 保存今日记录';
+});
+
+// --- Save Weight ---
+document.getElementById('saveWeightBtn').addEventListener('click', () => {
+  const weight = parseFloat(document.getElementById('weightInput').value);
+  const date = document.getElementById('weightDate').value || today();
+  if (!weight || weight < 20 || weight > 300) return toast('请输入有效的体重', 'error');
+  DataManager.saveWeight({ id: DataManager.genId(), userId: currentUser.id, date, weight });
+  toast('⚖️ 体重已记录！');
+  document.getElementById('weightInput').value = '';
+});
+
+// ==================== HISTORY TAB ====================
+function renderHistoryTab() {
+  const filter = document.getElementById('historyFilter').value;
+  const dateFrom = document.getElementById('historyDateFrom').value;
+  const dateTo = document.getElementById('historyDateTo').value;
+  const container = document.getElementById('historyList');
+
+  let items = [];
+
+  if (filter === 'all' || filter === 'workout') {
+    DataManager.getWorkouts().filter(w => w.userId === currentUser.id).forEach(w => {
+      items.push({ ...w, category: 'workout', icon: '🏋️', label: '运动记录' });
+    });
+  }
+  if (filter === 'all' || filter === 'checkin') {
+    DataManager.getCheckins().filter(c => c.userId === currentUser.id).forEach(c => {
+      items.push({ ...c, category: 'checkin', icon: '✅', label: '打卡' });
+    });
+  }
+  if (filter === 'all' || filter === 'weight') {
+    DataManager.getWeights().filter(w => w.userId === currentUser.id).forEach(w => {
+      items.push({ ...w, category: 'weight', icon: '⚖️', label: '体重记录' });
+    });
+  }
+
+  // Sort by date desc
+  items.sort((a, b) => b.date.localeCompare(a.date));
+
+  // Filter by date range
+  if (dateFrom) items = items.filter(i => i.date >= dateFrom);
+  if (dateTo) items = items.filter(i => i.date <= dateTo);
+
+  if (items.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>暂无记录</p><p style="font-size:13px">去「记录」页添加数据吧~</p></div>`;
+    return;
+  }
+
+  container.innerHTML = items.map((item, i) => `
+    <div class="history-item" data-idx="${i}">
+      <div class="history-badge badge-${item.category}">${item.icon}</div>
+      <div class="history-info">
+        <div class="h-title">${historyTitle(item)}</div>
+        <div class="h-meta">${item.date} · ${item.label}</div>
+      </div>
+      <button class="btn btn-sm btn-danger delete-history" data-id="${item.id}" data-category="${item.category}">🗑</button>
+    </div>
+    <div class="history-detail" id="detail-${i}">${historyDetail(item)}</div>
+  `).join('');
+
+  // Click to expand
+  container.querySelectorAll('.history-item').forEach(el => {
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('.delete-history')) return;
+      this.classList.toggle('expanded');
+    });
+  });
+
+  // Delete buttons
+  container.querySelectorAll('.delete-history').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const id = this.dataset.id;
+      const cat = this.dataset.category;
+      if (cat === 'workout') DataManager.deleteWorkout(id);
+      else if (cat === 'weight') DataManager.deleteWeight(id);
+      else if (cat === 'checkin') {
+        const ci = DataManager.getCheckins().find(c => c.id === id || (c.userId === currentUser.id && c.date === this.closest('.history-item')?.querySelector('.h-meta')?.textContent?.split('·')[0]?.trim()));
+        if (ci) DataManager.toggleCheckin(ci.userId, ci.date);
+      }
+      toast('已删除');
+      renderHistoryTab();
+    });
+  });
+}
+
+function historyTitle(item) {
+  if (item.category === 'workout') return item.items.map(i => i.name || i.weight || i.reps || '?').join('、');
+  if (item.category === 'weight') return `${item.weight} kg`;
+  if (item.category === 'checkin') return '完成打卡 ✅';
+  return '';
+}
+function historyDetail(item) {
+  if (item.category === 'workout') {
+    return item.items.map(i => {
+      const parts = [i.name];
+      if (i.weight) parts.push(i.weight);
+      if (i.reps) parts.push(i.reps + '次');
+      const style = i.done ? 'text-decoration:line-through;opacity:0.6' : '';
+      const check = i.done ? ' ✅' : '';
+      return `<span class="tag tag-strength" style="${style}">${parts.join(' ')}${check}</span>`;
+    }).join(' ');
+  }
+  if (item.category === 'weight') return `体重: ${item.weight} kg`;
+  if (item.category === 'checkin') return '今日已健身打卡！';
+  return '';
+}
+
+document.getElementById('refreshHistoryBtn').addEventListener('click', renderHistoryTab);
+
+// ==================== STATS TAB ====================
+let weightChartInstance = null;
+let weeklyChartInstance = null;
+
+function renderStatsTab() {
+  const userId = currentUser.id;
+  const workouts = DataManager.getWorkouts().filter(w => w.userId === userId);
+  const weights = DataManager.getWeights().filter(w => w.userId === userId);
+  const checkins = DataManager.getCheckins().filter(c => c.userId === userId);
+
+  // Calculate stats
+  const totalWorkouts = workouts.length;
+  const totalCheckins = checkins.length;
+  const totalItems = workouts.reduce((sum, w) => sum + (w.items ? w.items.length : 0), 0);
+
+  // Streak calculation
+  let streak = 0;
+  const todayDate = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() - i);
+    const dateStr = formatDate(d);
+    const hasActivity = checkins.some(c => c.date === dateStr) ||
+      workouts.some(w => w.date === dateStr);
+    if (hasActivity) streak++;
+    else break;
+  }
+
+  // Render stat cards
+  document.getElementById('statsCards').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${totalWorkouts}</div><div class="stat-label">总运动次数</div></div>
+    <div class="stat-card"><div class="stat-value">${totalCheckins}</div><div class="stat-label">打卡天数</div></div>
+    <div class="stat-card"><div class="stat-value">🔥 ${streak}</div><div class="stat-label">连续运动天数</div></div>
+    <div class="stat-card"><div class="stat-value">${totalItems}</div><div class="stat-label">总运动项目</div></div>
+  `;
+
+  // Weight chart
+  renderWeightChart(weights);
+
+  // Weekly chart
+  renderWeeklyChart(workouts, checkins);
+}
+
+function renderWeightChart(weights) {
+  const ctx = document.getElementById('weightChart').getContext('2d');
+  if (weightChartInstance) weightChartInstance.destroy();
+
+  const sorted = [...weights].sort((a, b) => a.date.localeCompare(b.date));
+  if (sorted.length > 30) sorted.splice(0, sorted.length - 30); // Last 30 entries
+
+  weightChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(w => w.date),
+      datasets: [{
+        label: '体重 (kg)',
+        data: sorted.map(w => w.weight),
+        borderColor: '#e91e63',
+        backgroundColor: 'rgba(233,30,99,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#e91e63',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { title: { display: true, text: 'kg' }, min: undefined }
+      }
+    }
+  });
+}
+
+function renderWeeklyChart(workouts, checkins) {
+  const ctx = document.getElementById('weeklyChart').getContext('2d');
+  if (weeklyChartInstance) weeklyChartInstance.destroy();
+
+  // Last 8 weeks
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay() + 1 - i * 7);
+    const start = formatDate(d);
+    const endDate = new Date(d);
+    endDate.setDate(endDate.getDate() + 6);
+    const end = formatDate(endDate);
+    const count = workouts.filter(w => w.date >= start && w.date <= end).length +
+      checkins.filter(c => c.date >= start && c.date <= end).length;
+    weeks.push({ label: `${start.slice(5)}`, count });
+  }
+
+  weeklyChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: weeks.map(w => w.label),
+      datasets: [{
+        label: '运动次数',
+        data: weeks.map(w => w.count),
+        backgroundColor: ['#e91e63','#ec4899','#f472b6','#f9a8d4','#fbcfe8','#fce7f3','#fce4ec','#f8fafc'],
+        borderRadius: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+// ==================== PK TAB ====================
+function renderPKTab() {
+  const users = DataManager.getUsers();
+  if (users.length < 2) {
+    document.getElementById('pkGrid').innerHTML = '<div class="card text-center"><p>需要两个用户才能PK哦~</p></div>';
+    return;
+  }
+
+  const [u1, u2] = users;
+  const weekStart = getWeekStart(new Date());
+  const todayStr = today();
+
+  function getUserWeekStats(userId) {
+    const workouts = DataManager.getWorkouts().filter(w => w.userId === userId && w.date >= weekStart && w.date <= todayStr);
+    const checkins = DataManager.getCheckins().filter(c => c.userId === userId && c.date >= weekStart && c.date <= todayStr);
+    const weights = DataManager.getWeights().filter(w => w.userId === userId);
+    const latestWeight = weights.length > 0 ? weights.sort((a,b) => b.date.localeCompare(a.date))[0].weight : '--';
+    const totalItems = workouts.reduce((sum, w) => sum + (w.items ? w.items.length : 0), 0);
+
+    let streak = 0;
+    const td = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(td); d.setDate(d.getDate() - i);
+      const ds = formatDate(d);
+      const ok = checkins.some(c => c.date === ds) ||
+        DataManager.getWorkouts().filter(w => w.userId === userId).some(w => w.date === ds);
+      if (ok) streak++; else break;
+    }
+
+    return {
+      workouts: workouts.length,
+      checkins: checkins.length,
+      streak,
+      totalItems,
+      latestWeight
+    };
+  }
+
+  const s1 = getUserWeekStats(u1.id);
+  const s2 = getUserWeekStats(u2.id);
+
+  function winner(a, b) { return a > b ? 'pk-winner' : ''; }
+
+  document.getElementById('pkGrid').innerHTML = `
+    <div class="pk-card him">
+      <div class="pk-name">${u1.avatar} ${u1.name}</div>
+      <div class="pk-stat"><span>本周训练</span><span class="${winner(s1.workouts, s2.workouts)}">${s1.workouts} 次</span></div>
+      <div class="pk-stat"><span>本周打卡</span><span class="${winner(s1.checkins, s2.checkins)}">${s1.checkins} 天</span></div>
+      <div class="pk-stat"><span>连续天数</span><span class="${winner(s1.streak, s2.streak)}">${s1.streak} 天</span></div>
+      <div class="pk-stat"><span>周运动项目</span><span class="${winner(s1.totalItems, s2.totalItems)}">${s1.totalItems} 项</span></div>
+      <div class="pk-stat"><span>最新体重</span><span>${s1.latestWeight} kg</span></div>
+    </div>
+    <div class="pk-vs">⚡VS⚡</div>
+    <div class="pk-card her">
+      <div class="pk-name">${u2.avatar} ${u2.name}</div>
+      <div class="pk-stat"><span>本周训练</span><span class="${winner(s2.workouts, s1.workouts)}">${s2.workouts} 次</span></div>
+      <div class="pk-stat"><span>本周打卡</span><span class="${winner(s2.checkins, s1.checkins)}">${s2.checkins} 天</span></div>
+      <div class="pk-stat"><span>连续天数</span><span class="${winner(s2.streak, s1.streak)}">${s2.streak} 天</span></div>
+      <div class="pk-stat"><span>周运动项目</span><span class="${winner(s2.totalItems, s1.totalItems)}">${s2.totalItems} 项</span></div>
+      <div class="pk-stat"><span>最新体重</span><span>${s2.latestWeight} kg</span></div>
+    </div>
+  `;
+}
+
+// ==================== SCHEDULE & TEMPLATES TAB ====================
+function renderWeeklySchedule() {
+  const schedule = DataManager.getSchedule();
+  const userSchedule = schedule[currentUser.id] || {};
+  const templates = DataManager.getTemplates();
+  const container = document.getElementById('weeklySchedule');
+
+  const dayKeys = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  const dayLabels = ['周一','周二','周三','周四','周五','周六','周日'];
+  const todayKey = dayKeys[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]; // Adjust: JS getDay 0=Sun
+
+  container.innerHTML = `
+    <div class="schedule-grid">
+      ${dayKeys.map((key, i) => {
+        const routineId = userSchedule[key];
+        const template = routineId ? templates.find(t => t.id === routineId) : null;
+        const isToday = key === todayKey;
+        return `
+          <div class="schedule-day ${isToday ? 'active' : ''}" data-day="${key}">
+            <div class="day-name">${dayLabels[i]}${isToday ? ' · 今天' : ''}</div>
+            <div class="day-routine">${template ? template.name : ''}</div>
+            <div class="day-rest">${template ? '' : '休息'}</div>
+            <div class="day-edit">点击切换</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="routine-selector" id="routineSelector"></div>
+  `;
+
+  // Day click → show selector
+  container.querySelectorAll('.schedule-day').forEach(dayEl => {
+    dayEl.addEventListener('click', function(e) {
+      const day = this.dataset.day;
+      showRoutineSelector(day, this);
+    });
+  });
+}
+
+function showRoutineSelector(day, dayEl) {
+  const templates = DataManager.getTemplates();
+  let sel = document.getElementById('routineSelector');
+  if (!sel) { sel = document.createElement('div'); sel.id = 'routineSelector'; sel.className = 'routine-selector'; document.body.appendChild(sel); }
+
+  sel.innerHTML = templates.map(t => `
+    <button class="routine-opt" data-id="${t.id}">${t.name}</button>
+  `).join('') + `<button class="routine-opt rest-day" data-id="">🗑 设为休息日</button>`;
+
+  // Position the selector near the clicked day
+  const rect = dayEl.getBoundingClientRect();
+  sel.style.left = rect.left + 'px';
+  sel.style.top = (rect.bottom + 4) + 'px';
+  sel.classList.add('show');
+
+  sel.querySelectorAll('.routine-opt').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.id;
+      const schedule = DataManager.getSchedule();
+      if (!schedule[currentUser.id]) schedule[currentUser.id] = {};
+      schedule[currentUser.id][day] = id || null;
+      DataManager.saveSchedule(schedule);
+      sel.classList.remove('show');
+      renderWeeklySchedule();
+      toast(id ? '已更新课表' : '已设为休息日');
+    });
+  });
+
+  // Close on outside click
+  const closeHandler = function(e) {
+    if (!sel.contains(e.target) && e.target !== dayEl) {
+      sel.classList.remove('show');
+      document.removeEventListener('click', closeHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeHandler), 10);
+}
+
+function renderScheduleTab() {
+  renderWeeklySchedule();
+}
+
+function renderTemplatesTab() {
+  const container = document.getElementById('templateList');
+  if (!container) return;
+
+  // Sync localStorage with hardcoded defaults if needed
+  if (!localStorage.getItem('fitness_templates')) {
+    localStorage.setItem('fitness_templates', JSON.stringify([
+      { id: 't1', name: '🏋️ 推胸日', items: [{ name: '杠铃卧推', weight: '', reps: '' }, { name: '哑铃飞鸟', weight: '', reps: '' }, { name: '绳索夹胸', weight: '', reps: '' }] },
+      { id: 't2', name: '🔙 拉背日', items: [{ name: '引体向上', weight: '自重', reps: '' }, { name: '杠铃划船', weight: '', reps: '' }, { name: '高位下拉', weight: '', reps: '' }] },
+      { id: 't3', name: '🦵 腿部日', items: [{ name: '杠铃深蹲', weight: '', reps: '' }, { name: '腿举', weight: '', reps: '' }, { name: '腿弯举', weight: '', reps: '' }] },
+    ]));
+  }
+
+  // Re-render from localStorage to keep UI in sync
+  let templates;
+  try { templates = JSON.parse(localStorage.getItem('fitness_templates')) || []; } catch(e) { templates = []; }
+
+  if (templates.length > 0) {
+    container.innerHTML = templates.map(t => `
+      <div class="template-card">
+        <div><div class="t-name">${t.name}</div><div class="t-count">${t.items.length} 个项目</div></div>
+        <div class="template-actions">
+          <button class="btn btn-sm btn-primary" onclick="editTemplate('${t.id}')">✏️ 编辑</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">🗑 删除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// Global template edit/delete functions (called by onclick)
+function editTemplate(id) {
+  let t;
+  try { t = JSON.parse(localStorage.getItem('fitness_templates') || '[]').find(x => x.id === id); } catch(e) {}
+  if (t) openTemplateModal(t);
+}
+function deleteTemplate(id) {
+  if (!confirm('确定删除这个模板吗？')) return;
+  try {
+    const temps = JSON.parse(localStorage.getItem('fitness_templates') || '[]').filter(t => t.id !== id);
+    localStorage.setItem('fitness_templates', JSON.stringify(temps));
+  } catch(e) {}
+  renderTemplatesTab();
+  toast('模板已删除');
+}
+
+// --- Template Modal ---
+document.getElementById('addTemplateBtn').addEventListener('click', () => openTemplateModal());
+document.getElementById('cancelTemplateBtn').addEventListener('click', closeTemplateModal);
+document.getElementById('addTemplateExerciseBtn').addEventListener('click', addTemplateExercise);
+
+function openTemplateModal(template = null) {
+  editingTemplateId = template ? template.id : null;
+  document.getElementById('templateModalTitle').textContent = template ? '编辑模板' : '新建模板';
+  document.getElementById('templateNameInput').value = template ? template.name : '';
+  document.getElementById('templateModal').classList.add('show');
+
+  const container = document.getElementById('templateExercises');
+  if (template && template.items.length > 0) {
+    container.innerHTML = template.items.map((item, i) => `
+      <div class="workout-item" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="text" class="modal-item-name" value="${escapeHtml(item.name)}" style="flex:2" placeholder="项目名称">
+        <input type="text" class="modal-item-weight" value="${escapeHtml(item.weight || '')}" style="flex:1.5" placeholder="重量">
+        <input type="text" class="modal-item-reps" value="${escapeHtml(item.reps || '')}" style="flex:1" placeholder="次数">
+        <button class="btn btn-sm btn-danger remove-modal-exercise">✕</button>
+      </div>
+    `).join('');
+  } else {
+    container.innerHTML = `
+      <div class="workout-item" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="text" class="modal-item-name" placeholder="项目名称" style="flex:2">
+        <input type="text" class="modal-item-weight" placeholder="重量" style="flex:1.5">
+        <input type="text" class="modal-item-reps" placeholder="次数" style="flex:1">
+        <button class="btn btn-sm btn-danger remove-modal-exercise" style="display:none">✕</button>
+      </div>
+    `;
+  }
+
+  container.querySelectorAll('.remove-modal-exercise').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (container.children.length <= 1) return toast('至少保留一个项目', 'error');
+      this.closest('.workout-item').remove();
+    });
+  });
+}
+
+function addTemplateExercise() {
+  const container = document.getElementById('templateExercises');
+  const block = document.createElement('div');
+  block.className = 'workout-item';
+  block.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+  block.innerHTML = `
+    <input type="text" class="modal-item-name" placeholder="项目名称" style="flex:2">
+    <input type="text" class="modal-item-weight" placeholder="重量" style="flex:1.5">
+    <input type="text" class="modal-item-reps" placeholder="次数" style="flex:1">
+    <button class="btn btn-sm btn-danger remove-modal-exercise">✕</button>
+  `;
+  container.appendChild(block);
+  block.querySelector('.remove-modal-exercise').addEventListener('click', function() {
+    if (container.children.length <= 1) return toast('至少保留一个项目', 'error');
+    block.remove();
+  });
+}
+
+function closeTemplateModal() {
+  document.getElementById('templateModal').classList.remove('show');
+  editingTemplateId = null;
+}
+
+document.getElementById('saveTemplateBtn').addEventListener('click', () => {
+  const name = document.getElementById('templateNameInput').value.trim();
+  if (!name) return toast('请输入模板名称', 'error');
+
+  const items = [];
+  document.querySelectorAll('#templateExercises .workout-item').forEach(block => {
+    const itemName = block.querySelector('.modal-item-name').value.trim();
+    const itemWeight = block.querySelector('.modal-item-weight').value.trim();
+    const itemReps = block.querySelector('.modal-item-reps').value.trim();
+    if (itemName || itemWeight || itemReps) items.push({ name: itemName, weight: itemWeight, reps: itemReps });
+  });
+
+  if (items.length === 0) return toast('请至少添加一个项目', 'error');
+
+  // Read/write templates directly from localStorage
+  let templates = [];
+  try { templates = JSON.parse(localStorage.getItem('fitness_templates')) || []; } catch(e) {}
+
+  if (editingTemplateId) {
+    templates = templates.map(t =>
+      t.id === editingTemplateId ? { ...t, name, items } : t
+    );
+    toast('模板已更新');
+  } else {
+    templates.push({ id: DataManager.genId(), name, items });
+    toast('模板已创建');
+  }
+  localStorage.setItem('fitness_templates', JSON.stringify(templates));
+  closeTemplateModal();
+  renderTemplatesTab();
+});
+
+// ==================== SETTINGS TAB ====================
+function renderSettingsTab() {
+  const users = DataManager.getUsers();
+  document.getElementById('profileSettings').innerHTML = users.map(u => `
+    <div class="setting-row">
+      <div class="setting-label">${u.avatar} ${u.id === 'user1' ? '男生' : '女生'}</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" value="${u.name}" data-user-id="${u.id}" class="profile-name-input" style="width:120px;padding:6px 10px;font-size:14px">
+        <button class="btn btn-sm btn-primary save-profile" data-user-id="${u.id}">保存</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.save-profile').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.userId;
+      const input = document.querySelector(`.profile-name-input[data-user-id="${id}"]`);
+      const name = input.value.trim();
+      if (!name) return toast('名字不能为空', 'error');
+      const users = DataManager.getUsers().map(u => u.id === id ? { ...u, name } : u);
+      DataManager.saveUsers(users);
+      if (currentUser.id === id) currentUser = users.find(u => u.id === id);
+      renderUserSwitcher();
+      toast('名字已更新');
+    });
+  });
+}
+
+// Export
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    fitness_users: DataManager.getUsers(),
+    fitness_workouts: DataManager.getWorkouts(),
+    fitness_cardio: DataManager.getCardios(),
+    fitness_weight: DataManager.getWeights(),
+    fitness_checkins: DataManager.getCheckins(),
+    fitness_templates: DataManager.getTemplates(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fitness-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 数据已导出');
+});
+
+// Import
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.fitness_users) return toast('无效的备份文件', 'error');
+      if (!confirm('导入数据将覆盖现有数据，确定继续？')) return;
+      if (data.fitness_users) DataManager.set('fitness_users', data.fitness_users);
+      if (data.fitness_workouts) DataManager.set('fitness_workouts', data.fitness_workouts);
+      if (data.fitness_cardio) DataManager.set('fitness_cardio', data.fitness_cardio);
+      if (data.fitness_weight) DataManager.set('fitness_weight', data.fitness_weight);
+      if (data.fitness_checkins) DataManager.set('fitness_checkins', data.fitness_checkins);
+      if (data.fitness_templates) DataManager.set('fitness_templates', data.fitness_templates);
+      currentUser = DataManager.getUsers()[0];
+      renderUserSwitcher();
+      refreshCurrentTab();
+      toast('📤 数据已导入！');
+    } catch(err) {
+      toast('文件格式错误', 'error');
+    }
+  };
+  reader.readAsText(file);
+  this.value = '';
+});
+
+// Clear Data
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+  if (!confirm('⚠️ 确定要清除全部数据吗？此操作不可恢复！\n\n建议先导出备份。')) return;
+  if (!confirm('再次确认：清除所有健身记录、模板和设置？')) return;
+  ['fitness_users','fitness_workouts','fitness_cardio','fitness_weight','fitness_checkins','fitness_templates'].forEach(k => localStorage.removeItem(k));
+  currentUser = DataManager.getUsers()[0];
+  renderUserSwitcher();
+  refreshCurrentTab();
+  toast('所有数据已清除');
+});
+
+// ==================== INIT ====================
+function init() {
+  // Ensure default data exists (check parsed data, not just localStorage key)
+  const users = DataManager.getUsers();
+  if (!users || users.length === 0) DataManager.set('fitness_users', DataManager.defaultUsers());
+  const tmpl = DataManager.getTemplates();
+  if (!tmpl || tmpl.length === 0) DataManager.set('fitness_templates', DataManager.defaultTemplates());
+  const sched = DataManager.getSchedule();
+  if (!sched || Object.keys(sched).length === 0) DataManager.set('fitness_schedule', DataManager.defaultSchedule());
+
+  currentUser = DataManager.getUsers()[0];
+  renderUserSwitcher();
+  setupTabs();
+  renderRecordTab();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+// Close modal on overlay click
+document.getElementById('templateModal').addEventListener('click', function(e) {
+  if (e.target === this) closeTemplateModal();
+});
+</script>
+
+</body>
+</html>
