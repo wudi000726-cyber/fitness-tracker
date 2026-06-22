@@ -366,6 +366,19 @@ input[type="number"]{font-variant-numeric:tabular-nums}
   });
 })();
 
+  // 自动修复用户名字
+  try {
+    const users = JSON.parse(localStorage.getItem('fitness_users'));
+    if (Array.isArray(users)) {
+      let changed = false;
+      users.forEach(u => {
+        if (u.name === '男朋友') { u.name = '吴迪'; changed = true; }
+        else if (u.name === '女朋友') { u.name = '张淼'; changed = true; }
+      });
+      if (changed) localStorage.setItem('fitness_users', JSON.stringify(users));
+    }
+  } catch (e) {}
+
 // ==================== DATA MANAGER ====================
 const DataManager = {
   _cache: {},
