@@ -392,8 +392,8 @@ const DataManager = {
   // ---- Users ----
   getUsers() {
     return this.get('fitness_users', [
-      { id: 'user1', name: '男朋友', avatar: '👦', color: '#3b82f6' },
-      { id: 'user2', name: '女朋友', avatar: '👧', color: '#ec4899' },
+      { id: 'user1', name: '吴迪', avatar: '👦', color: '#3b82f6' },
+      { id: 'user2', name: '张淼', avatar: '👧', color: '#ec4899' },
     ]);
   },
   saveUsers(users) { this.set('fitness_users', users); },
@@ -1037,7 +1037,7 @@ function renderSettingsTab() {
   const users = DataManager.getUsers();
   document.getElementById('profileSettings').innerHTML = users.map(u => `
     <div class="setting-row">
-      <div class="setting-label">${u.avatar} ${u.id === 'user1' ? '男生' : '女生'}</div>
+      <div class="setting-label">${u.avatar} ${u.name}</div>
       <div style="display:flex;gap:8px">
         <input type="text" value="${escapeHtml(u.name)}" data-user-id="${u.id}" class="profile-name-input" style="width:120px;padding:6px 10px;font-size:14px">
         <button class="btn btn-sm btn-primary save-profile" data-user-id="${u.id}">保存</button>
