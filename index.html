@@ -9,6 +9,12 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><rect width='180' height='180' rx='36' fill='%23e91e63'/><text x='90' y='110' font-size='100' text-anchor='middle'>🏋️</text></svg>">
 <title>🏋️ 张淼&吴迪健身记录</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyAU0lQggOUdSlE5IZJ_LwC2B0MdLOJLalI",authDomain:"fitness-tracker-c211a.firebaseapp.com",databaseURL:"https://fitness-tracker-c211a-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"fitness-tracker-c211a",storageBucket:"fitness-tracker-c211a.firebasestorage.app",messagingSenderId:"965391094606",appId:"1:965391094606:web:3d05cb6c9a32912e2e441f"});
+window._fbDB = firebase.database();
+</script>
 <style>
 /* ========== Reset & Variables ========== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -346,140 +352,158 @@ input[type="number"]{font-variant-numeric:tabular-nums}
 <div class="toast hidden" id="toast"></div>
 
 <script>
-// ==================== DATA AUTO-REPAIR ====================
-(function () {
-  const keys = ['fitness_users', 'fitness_workouts', 'fitness_weight', 'fitness_checkins', 'fitness_templates', 'fitness_schedule'];
-  keys.forEach(k => {
-    try {
-      const v = localStorage.getItem(k);
-      if (v === 'null' || v === 'undefined' || v === 'false' || v === '') {
-        localStorage.removeItem(k);
-      } else if (v !== null) {
-        const p = JSON.parse(v);
-        if (p === null || p === undefined || (typeof p !== 'object')) {
-          localStorage.removeItem(k);
-        }
-      }
-    } catch (e) {
-      localStorage.removeItem(k);
-    }
+// ==================== FIREBASE DATA MANAGER ====================
+(function() {
+
+var db = window._fbDB;
+
+// -- defaults --
+var DEFAULT_USERS = [
+  { id: 'user1', name: '吴迪', avatar: '👦', color: '#3b82f6' },
+  { id: 'user2', name: '张淼', avatar: '👧', color: '#ec4899' },
+];
+var DEFAULT_TEMPLATES = [
+  { id: 't1', name: '🏋️ 推胸日', items: [{ name: '杠铃卧推', weight: '', sets: '', reps: '' }, { name: '哑铃飞鸟', weight: '', sets: '', reps: '' }, { name: '绳索夹胸', weight: '', sets: '', reps: '' }] },
+  { id: 't2', name: '🔙 拉背日', items: [{ name: '引体向上', weight: '自重', sets: '', reps: '' }, { name: '杠铃划船', weight: '', sets: '', reps: '' }, { name: '高位下拉', weight: '', sets: '', reps: '' }] },
+  { id: 't3', name: '🦵 腿部日', items: [{ name: '杠铃深蹲', weight: '', sets: '', reps: '' }, { name: '腿举', weight: '', sets: '', reps: '' }, { name: '腿弯举', weight: '', sets: '', reps: '' }] },
+];
+var DEFAULT_SCHEDULE = {
+  user1: { monday: 't1', tuesday: null, wednesday: 't2', thursday: null, friday: 't3', saturday: null, sunday: null },
+  user2: { monday: 't1', tuesday: null, wednesday: 't2', thursday: null, friday: 't3', saturday: null, sunday: null },
+};
+
+// -- in-memory cache --
+var _cache = {
+  users: DEFAULT_USERS.slice(),
+  workouts: [],
+  weights: [],
+  checkins: [],
+  templates: DEFAULT_TEMPLATES.slice(),
+  schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)),
+};
+
+// -- helpers --
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function arr(v) { return Array.isArray(v) ? v : Object.values(v || {}); }
+
+function fixNames(users) {
+  if (!Array.isArray(users)) return users;
+  users.forEach(function(u) {
+    if (u.name === '男朋友') u.name = '吴迪';
+    else if (u.name === '女朋友') u.name = '张淼';
   });
-})();
+  return users;
+}
 
-  // 自动修复用户名字
-  try {
-    const users = JSON.parse(localStorage.getItem('fitness_users'));
-    if (Array.isArray(users)) {
-      let changed = false;
-      users.forEach(u => {
-        if (u.name === '男朋友') { u.name = '吴迪'; changed = true; }
-        else if (u.name === '女朋友') { u.name = '张淼'; changed = true; }
-      });
-      if (changed) localStorage.setItem('fitness_users', JSON.stringify(users));
-    }
-  } catch (e) {}
-
-// ==================== DATA MANAGER ====================
-const DataManager = {
-  _cache: {},
-
-  get(key, fallback = []) {
-    try {
-      const v = localStorage.getItem(key);
-      if (v === null || v === undefined || v === 'null' || v === 'undefined' || v === '') return fallback;
-      const parsed = JSON.parse(v);
-      if (parsed === null || parsed === undefined) return fallback;
-      if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
-      if (typeof fallback === 'object' && !Array.isArray(fallback) && typeof parsed !== 'object') return fallback;
-      return parsed;
-    } catch (e) {
-      return fallback;
-    }
-  },
-
-  set(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
-    this._cache[key] = val;
-  },
-
-  genId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  },
-
-  // ---- Users ----
-  getUsers() {
-    return this.get('fitness_users', [
-      { id: 'user1', name: '吴迪', avatar: '👦', color: '#3b82f6' },
-      { id: 'user2', name: '张淼', avatar: '👧', color: '#ec4899' },
-    ]);
-  },
-  saveUsers(users) { this.set('fitness_users', users); },
-
-  // ---- Workouts ----
-  getWorkouts() { return this.get('fitness_workouts', []); },
-  saveWorkout(w) {
-    const list = this.getWorkouts();
-    list.unshift(w);
-    this.set('fitness_workouts', list);
-  },
-  updateWorkout(id, data) {
-    const list = this.getWorkouts();
-    const idx = list.findIndex(w => w.id === id);
-    if (idx >= 0) { list[idx] = { ...list[idx], ...data }; this.set('fitness_workouts', list); }
-  },
-  deleteWorkout(id) {
-    this.set('fitness_workouts', this.getWorkouts().filter(w => w.id !== id));
-  },
-
-  // ---- Weight ----
-  getWeights() { return this.get('fitness_weight', []); },
-  saveWeight(w) {
-    const list = this.getWeights();
-    list.unshift(w);
-    this.set('fitness_weight', list);
-  },
-  deleteWeight(id) {
-    this.set('fitness_weight', this.getWeights().filter(w => w.id !== id));
-  },
-
-  // ---- Check-ins ----
-  getCheckins() { return this.get('fitness_checkins', []); },
-  toggleCheckin(userId, date) {
-    const list = this.getCheckins();
-    const idx = list.findIndex(c => c.userId === userId && c.date === date);
-    if (idx >= 0) { list.splice(idx, 1); this.set('fitness_checkins', list); return false; }
-    else { list.unshift({ userId, date }); this.set('fitness_checkins', list); return true; }
-  },
-  isCheckedIn(userId, date) {
-    return this.getCheckins().some(c => c.userId === userId && c.date === date);
-  },
-
-  // ---- Templates ----
-  getTemplates() {
-    const defaults = [
-      { id: 't1', name: '🏋️ 推胸日', items: [{ name: '杠铃卧推', weight: '', sets: '', reps: '' }, { name: '哑铃飞鸟', weight: '', sets: '', reps: '' }, { name: '绳索夹胸', weight: '', sets: '', reps: '' }] },
-      { id: 't2', name: '🔙 拉背日', items: [{ name: '引体向上', weight: '自重', sets: '', reps: '' }, { name: '杠铃划船', weight: '', sets: '', reps: '' }, { name: '高位下拉', weight: '', sets: '', reps: '' }] },
-      { id: 't3', name: '🦵 腿部日', items: [{ name: '杠铃深蹲', weight: '', sets: '', reps: '' }, { name: '腿举', weight: '', sets: '', reps: '' }, { name: '腿弯举', weight: '', sets: '', reps: '' }] },
-    ];
-    const list = this.get('fitness_templates', defaults);
-    // Ensure every template has id, name, and items array
-    return list.map(t => ({
-      id: t.id || DataManager.genId(),
+function fixTemplates(list) {
+  return arr(list).map(function(t) {
+    return {
+      id: t.id || genId(),
       name: t.name || '未命名模板',
       items: Array.isArray(t.items) ? t.items : [],
-    }));
-  },
-  saveTemplates(templates) { this.set('fitness_templates', templates); },
+    };
+  });
+}
 
-  // ---- Weekly Schedule ----
-  getSchedule() {
-    return this.get('fitness_schedule', {
-      user1: { monday: 't1', tuesday: null, wednesday: 't2', thursday: null, friday: 't3', saturday: null, sunday: null },
-      user2: { monday: 't1', tuesday: null, wednesday: 't2', thursday: null, friday: 't3', saturday: null, sunday: null },
-    });
+// -- sync setup --
+function syncFB(fbPath, cacheKey, fallback, transform) {
+  db.ref(fbPath).on('value', function(snapshot) {
+    var val = snapshot.val();
+    if (val === null || val === undefined) {
+      val = fallback;
+      db.ref(fbPath).set(val);
+    }
+    val = transform ? transform(val) : val;
+    _cache[cacheKey] = val;
+    // refresh UI when data changes (from any device)
+    if (typeof refreshCurrentTab === 'function') refreshCurrentTab();
+  });
+}
+
+// Initialize all sync paths
+syncFB('users', 'users', DEFAULT_USERS, fixNames);
+syncFB('workouts', 'workouts', []);
+syncFB('weights', 'weights', []);
+syncFB('checkins', 'checkins', []);
+syncFB('templates', 'templates', DEFAULT_TEMPLATES, fixTemplates);
+syncFB('schedule', 'schedule', DEFAULT_SCHEDULE);
+
+// -- Public API (same interface as old DataManager) --
+window.DataManager = {
+  genId: genId,
+
+  // Users
+  getUsers: function() { return _cache.users; },
+  saveUsers: function(users) {
+    users = fixNames(users);
+    _cache.users = users;
+    db.ref('users').set(users);
   },
-  saveSchedule(s) { this.set('fitness_schedule', s); },
+
+  // Workouts
+  getWorkouts: function() { return _cache.workouts; },
+  saveWorkout: function(w) {
+    var list = _cache.workouts.slice();
+    list.unshift(w);
+    _cache.workouts = list;
+    db.ref('workouts').set(list);
+  },
+  updateWorkout: function(id, data) {
+    var list = _cache.workouts.map(function(w) { return w.id === id ? Object.assign({}, w, data) : w; });
+    _cache.workouts = list;
+    db.ref('workouts').set(list);
+  },
+  deleteWorkout: function(id) {
+    var list = _cache.workouts.filter(function(w) { return w.id !== id; });
+    _cache.workouts = list;
+    db.ref('workouts').set(list);
+  },
+
+  // Weights
+  getWeights: function() { return _cache.weights; },
+  saveWeight: function(w) {
+    var list = _cache.weights.slice();
+    list.unshift(w);
+    _cache.weights = list;
+    db.ref('weights').set(list);
+  },
+  deleteWeight: function(id) {
+    var list = _cache.weights.filter(function(w) { return w.id !== id; });
+    _cache.weights = list;
+    db.ref('weights').set(list);
+  },
+
+  // Check-ins
+  getCheckins: function() { return _cache.checkins; },
+  toggleCheckin: function(userId, date) {
+    var list = _cache.checkins.slice();
+    var idx = list.findIndex(function(c) { return c.userId === userId && c.date === date; });
+    if (idx >= 0) { list.splice(idx, 1); _cache.checkins = list; db.ref('checkins').set(list); return false; }
+    else { list.unshift({ userId: userId, date: date }); _cache.checkins = list; db.ref('checkins').set(list); return true; }
+  },
+  isCheckedIn: function(userId, date) {
+    return _cache.checkins.some(function(c) { return c.userId === userId && c.date === date; });
+  },
+
+  // Templates
+  getTemplates: function() { return fixTemplates(_cache.templates); },
+  saveTemplates: function(templates) {
+    _cache.templates = templates;
+    db.ref('templates').set(templates);
+  },
+
+  // Schedule
+  getSchedule: function() { return _cache.schedule; },
+  saveSchedule: function(s) {
+    _cache.schedule = s;
+    db.ref('schedule').set(s);
+  },
 };
+
+})();
 
 // ==================== APP STATE ====================
 let currentUser = DataManager.getUsers()[0];
